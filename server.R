@@ -1,5 +1,5 @@
 library(shiny)
-options(shiny.trace = F)  # cahnge to T for trace
+options(shiny.trace = F) 
 library(shinysky)
 
 shinyServer(function(input, output) {
@@ -9,20 +9,11 @@ shinyServer(function(input, output) {
   library(SnowballC)
   library(stringr)
   
-  # process.=cmpfun(process)
-  # classify.=cmpfun(classify)
-  # makeCorpus.=cmpfun(makeCorpus)
-  
-  ## FUNCTION DEFINITIONS ##
-  # Make Corpus and do transformations
   makeCorpus<- function(x) {
-    corpus<-Corpus(VectorSource(x))
-    # corpus <- tm_map(corpus, stripWhitespace)
+    corpus<- Corpus(VectorSource(x))
     corpus <- tm_map(corpus, content_transformer(tolower))
-    # corpus <- tm_map(corpus, removeWords, stopwords("english"))
     corpus <- tm_map(corpus, stemDocument)
     corpus<- tm_map(corpus,removePunctuation)
-    # corpus<- tm_map(corpus,removeNumbers)
     return(corpus)
   }
   
@@ -36,7 +27,7 @@ shinyServer(function(input, output) {
     x=gsub("\\}", "", x)
     x<-strsplit(unlist(x),"[\\.]{1}")
     x<-strsplit(unlist(x),"\\?+")
-    x<-strsplit(unlist(x),"\\!+") # Error: non-character argument?
+    x<-strsplit(unlist(x),"\\!+")
     x<-strsplit(unlist(x),"\\-+")
     x<-strsplit(unlist(x),"\\(+")
     x<-strsplit(unlist(x),"\\)+")
@@ -56,25 +47,19 @@ shinyServer(function(input, output) {
   }
   
   getPred=function(x){
-    # Take an input:
     test=x
-    # transform as training set was (lowercase, stem, strip punctuation etc.)
     test=iconv(test, to='ASCII', sub=' ')
     test=process(test)
     test=paste0(test, collapse=" ")
     corpus<-makeCorpus(test)
     corpus=as.character(corpus[[1]][1])
-    # Split by words:
     words<-unlist(strsplit(corpus,"\\s+"))
     Tfreq=afreq
-    # Isolate last two words of the sentence
     history=words[(length(words)-1):length(words)]
     nMin1=words[length(words)]
     history=paste(as.character(history),collapse=' ')
     histstring=str_replace_all(history, "[[:punct:]]", "?")
-    # Make prediction list of matches:
     Tpred=data.table(Tfreq[grep(paste0("^",histstring," "),Tfreq$grams),][order(-counts)])
-    # Isolate top prediction:
     pred=Tpred[1]$grams
     pred=unlist(strsplit(pred,"\\s+"))
     pred=pred[length(pred)]
@@ -84,13 +69,10 @@ shinyServer(function(input, output) {
     return(pred)
   }
   
-  # Trigrams
   afreq=readRDS("allcount.RDS")
   
   library(compiler)
   getPred.=cmpfun(getPred)
-  
-  # OUTPUT PREDICTION #
   
   output$prediction <- renderText({  
     as.character(getPred.(input$text))
